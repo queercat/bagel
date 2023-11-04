@@ -8,7 +8,7 @@ void bgl_error(char* message) {
 }
 
 void _strip_newlines(char** buffer) {
-    (*buffer)[strcspn(*buffer, "\n")] = 0;
+    (*buffer)[strcspn(*buffer, "\n\r")] = 0;
 }
 
 char* bgl_read() {
