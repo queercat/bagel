@@ -31,16 +31,16 @@ bgl_token *bgl_create_token(char *text)
   return token;
 }
 
-typedef struct bgl_list
+typedef struct bgl_token_list
 {
-  struct bgl_list *previous;
+  struct bgl_token_list *previous;
   bgl_token *current;
-  struct bgl_list *next;
-} bgl_list;
+  struct bgl_token_list *next;
+} bgl_token_list;
 
-bgl_list *bgl_create_list(bgl_token *current)
+bgl_token_list *bgl_create_token_list(bgl_token *current)
 {
-  bgl_list *list = malloc(sizeof(bgl_list));
+  bgl_token_list *list = malloc(sizeof(bgl_token_list));
 
   list->previous = NULL;
   list->current = current;
@@ -49,9 +49,9 @@ bgl_list *bgl_create_list(bgl_token *current)
   return list;
 }
 
-bgl_list *bgl_list_at(bgl_list *list, int idx)
+bgl_token_list *bgl_list_at(bgl_token_list *list, int idx)
 {
-  bgl_list *current = list;
+  bgl_token_list *current = list;
   int i = 0;
 
   while (i < idx)
@@ -66,11 +66,11 @@ bgl_list *bgl_list_at(bgl_list *list, int idx)
   return current;
 }
 
-void *bgl_list_insert(bgl_list **list, bgl_token *token)
+void *bgl_token_list_insert(bgl_token_list **list, bgl_token *token)
 {
-  bgl_list *current = *list;
+  bgl_token_list *current = *list;
 
-  bgl_list *new_list = bgl_create_list(token);
+  bgl_token_list *new_list = bgl_create_token_list(token);
 
   new_list->next = current;
   current->previous = new_list;
@@ -78,24 +78,24 @@ void *bgl_list_insert(bgl_list **list, bgl_token *token)
   *list = new_list;
 }
 
-void *bgl_list_append(bgl_list **list, bgl_token *token)
+void *bgl_token_list_append(bgl_token_list **list, bgl_token *token)
 {
-  bgl_list *current = *list;
+  bgl_token_list *current = *list;
 
   while (current->next != NULL)
   {
     current = current->next;
   }
 
-  bgl_list *new_list = bgl_create_list(token);
+  bgl_token_list *new_list = bgl_create_token_list(token);
 
   current->next = new_list;
   new_list->previous = current;
 }
 
-bgl_list *bgl_list_get_head(bgl_list *list)
+bgl_token_list *bgl_list_get_head(bgl_token_list *list)
 {
-  bgl_list *current = list;
+  bgl_token_list *current = list;
 
   while (current->previous != NULL)
   {
@@ -105,9 +105,9 @@ bgl_list *bgl_list_get_head(bgl_list *list)
   return current;
 }
 
-void *bgl_list_print(bgl_list *list)
+void *bgl_token_list_print(bgl_token_list *list)
 {
-  bgl_list *current = list;
+  bgl_token_list *current = list;
 
   while (current != NULL)
   {
@@ -116,10 +116,10 @@ void *bgl_list_print(bgl_list *list)
   }
 }
 
-bgl_list *bgl_tokenize(char *text)
+bgl_token_list *bgl_tokenize(char *text)
 {
-  bgl_list *list = NULL;
-  bgl_list *current = NULL;
+  bgl_token_list *list = NULL;
+  bgl_token_list *current = NULL;
 
   char *c = text;
 
@@ -189,21 +189,21 @@ bgl_list *bgl_tokenize(char *text)
 
     if (list == NULL)
     {
-      list = bgl_create_list(token);
+      list = bgl_create_token_list(token);
       current = list;
     }
     else
     {
-      bgl_list_append(&list, token);
+      bgl_token_list_append(&list, token);
       current = current->next;
     }
 
     c = end;
   }
 
-  list = bgl_list_get_head(list);
+  list = bgl_token_list_get_head(list);
 
-  bgl_list_print(list);
+  bgl_token_list_print(list);
 
   return list;
 }
@@ -221,7 +221,7 @@ void bgl_error(char *message)
   exit(1);
 }
 
-bgl_list *bgl_read()
+bgl_token_list *bgl_read()
 {
   int size = 1024;
   char *line = malloc(sizeof(char) * size);
@@ -230,19 +230,57 @@ bgl_list *bgl_read()
   fgets(line, size, stdin);
   _strip_buffer(line);
 
-  bgl_list *tokens = bgl_tokenize(line);
+  bgl_token_list *tokens = bgl_tokenize(line);
 
   free(line);
 
   return tokens;
 }
 
-bgl_list *bgl_eval(bgl_list *tokens)
+/** bgl data types */
+typedef struct bgl_data
+{
+  enum bgl_data_type
+  {
+    BGL_DATA_TYPE_STRING,
+    BGL_DATA_TYPE_NUMBER,
+    BGL_DATA_TYPE_SYMBOL,
+    BGL_DATA_TYPE_LIST,
+  } type;
+
+  union bgl_data_value
+  {
+    char *string;
+    int number;
+    char *symbol;
+    struct bgl_data *list;
+  } value;
+
+  struct bgl_data *next;
+} bgl_data;
+
+bgl_data *bgl_create_data(enum bgl_data_type type)
+{
+  bgl_data *data = malloc(sizeof(bgl_data));
+
+  data->type = type;
+  data->next = NULL;
+
+  return data;
+}
+
+bgl_data *bgl_evaluate(bgl_token_list *tokens)
+{
+}
+
+/** end bgl data types */
+
+bgl_token_list *bgl_eval(bgl_token_list *tokens)
 {
   return tokens;
 }
 
-void bgl_print(bgl_list *tokens)
+void bgl_print(bgl_token_list *tokens)
 {
   free(tokens);
 }
@@ -279,25 +317,25 @@ void bgl_tests()
   bgl_token *token_2 = bgl_create_token("lox");
 
   // can create bagel lists.
-  bgl_list *list_0 = bgl_create_list(token_0);
+  bgl_token_list *list_0 = bgl_create_token_list(token_0);
 
   if (!_assert(list_0 != NULL, "List_WhenCreated_ShouldNotBeNull"))
     failed = true;
 
-  bgl_list *list_1 = bgl_create_list(token_1);
-  bgl_list *list_2 = bgl_create_list(token_2);
+  bgl_token_list *list_1 = bgl_create_token_list(token_1);
+  bgl_token_list *list_2 = bgl_create_token_list(token_2);
 
   list_0->next = list_1;
   list_1->next = list_2;
 
-  if (!_assert(bgl_list_at(list_0, 1) == list_1, "List_WhenCreated_ShouldHaveNext"))
+  if (!_assert(bgl_token_list_at(list_0, 1) == list_1, "List_WhenCreated_ShouldHaveNext"))
     failed = true;
 
-  if (!_assert(bgl_list_at(list_0, 69) == NULL, "List_OverIndex_ShouldBeNullAndNotCrash"))
+  if (!_assert(bgl_token_list_at(list_0, 69) == NULL, "List_OverIndex_ShouldBeNullAndNotCrash"))
     failed = true;
 
   // can tokenize bagel text.
-  bgl_list *list_3 = bgl_tokenize("bagel cream cheese lox");
+  bgl_token_list *list_3 = bgl_tokenize("bagel cream cheese lox");
 
   if (!_assert(list_3 != NULL, "Tokenize_WhenCalled_ShouldNotBeNull"))
     failed = true;
