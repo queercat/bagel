@@ -22,6 +22,41 @@ bgl_token *bgl_create_token(char *text)
   return token;
 }
 
+typedef struct bgl_list
+{
+  bgl_token *previous;
+  bgl_token *current;
+  bgl_token *next;
+} bgl_list;
+
+bgl_list *bgl_create_list(bgl_token *current)
+{
+  bgl_list *list = malloc(sizeof(bgl_list));
+
+  list->previous = NULL;
+  list->current = current;
+  list->next = NULL;
+
+  return list;
+}
+
+bgl_list *bgl_list_at(bgl_list *list, int idx)
+{
+  bgl_list *current = list;
+  int i = 0;
+
+  while (i < idx)
+  {
+    if (current == NULL)
+      return NULL;
+
+    i++;
+    current = current->next;
+  }
+
+  return current;
+}
+
 /** end bgl token handling */
 
 void bgl_error(char *message)
@@ -73,11 +108,32 @@ void bgl_tests()
   printf("beginning tests...\n");
 
   // can create bagel token.
-  bgl_token *token = bgl_create_token("bagel");
+  bgl_token *token_0 = bgl_create_token("bagel");
 
-  if (!_assert(token != NULL, "Token_WhenCreated_ShouldNotBeNull"))
+  if (!_assert(token_0 != NULL, "Token_WhenCreated_ShouldNotBeNull"))
     failed = true;
-  if (!_assert(strcmp(token->text, "bagel") == 0, "Token_WhenCreated_TextValueShouldBeCorrect"))
+  if (!_assert(strcmp(token_0->text, "bagel") == 0, "Token_WhenCreated_TextValueShouldBeCorrect"))
+    failed = true;
+
+  bgl_token *token_1 = bgl_create_token("cream cheese");
+  bgl_token *token_2 = bgl_create_token("lox");
+
+  // can create bagel lists.
+  bgl_list *list_0 = bgl_create_list(token_0);
+
+  if (!_assert(list_0 != NULL, "List_WhenCreated_ShouldNotBeNull"))
+    failed = true;
+
+  bgl_list *list_1 = bgl_create_list(token_1);
+  bgl_list *list_2 = bgl_create_list(token_2);
+
+  list_0->next = list_1;
+  list_1->next = list_2;
+
+  if (!_assert(bgl_list_at(list_0, 1) == list_1, "List_WhenCreated_ShouldHaveNext"))
+    failed = true;
+
+  if (!_assert(bgl_list_at(list_0, 69) == NULL, "List_OverIndex_ShouldBeNullAndNotCrash"))
     failed = true;
 
   if (failed)
