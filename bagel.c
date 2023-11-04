@@ -125,103 +125,80 @@ bgl_list *bgl_tokenize(char *text)
 
   while (*c != '\0')
   {
-    if (*c == ' ')
+    char *start = c;
+    char *end = NULL;
+    bgl_token *token = bgl_create_token(NULL);
+
+    if (*c == '(' || *c == ')')
+    {
+      token->type = TOKEN_TYPE_LIST;
+      end = c + 1;
+    }
+
+    else if (*c == ' ')
     {
       c++;
       continue;
     }
 
-    if (*c == '(' || *c == ')')
+    else if (*c >= '0' && *c <= '9')
     {
-      char *start = c;
-      char *end = c + 1;
+      token->type = TOKEN_TYPE_NUMBER;
+      end = c + 1;
 
-      char *token = malloc(sizeof(char) * (end - start + 1));
-      memcpy(token, start, end - start);
-      token[end - start] = '\0';
-
-      bgl_token *bgl_token = bgl_create_token(token);
-
-      bgl_token->type = TOKEN_TYPE_LIST;
-
-      if (list == NULL)
+      while (*end >= '0' && *end <= '9')
       {
-        list = bgl_create_list(bgl_token);
-        current = list;
+        end++;
       }
-      else
-      {
-        bgl_list_append(&current, bgl_token);
-        current = current->next;
-      }
-
-      ++c;
-      continue;
     }
 
-    if (*c >= '0' && *c <= '9')
+    else if (*c == '"')
     {
-      char *start = c;
+      token->type = TOKEN_TYPE_STRING;
+      end = c + 1;
 
-      while (*c >= '0' && *c <= '9')
-        ++c;
-
-      char *end = c;
-
-      char *token = malloc(sizeof(char) * (end - start + 1));
-      memcpy(token, start, end - start);
-      token[end - start] = '\0';
-
-      bgl_token *bgl_token = bgl_create_token(token);
-
-      bgl_token->type = TOKEN_TYPE_NUMBER;
-
-      if (list == NULL)
+      while (*end != '"')
       {
-        list = bgl_create_list(bgl_token);
-        current = list;
-      }
-      else
-      {
-        bgl_list_append(&current, bgl_token);
-        current = current->next;
+        end++;
       }
 
-      continue;
+      end++;
     }
 
-    if (*c >= 'a' && *c <= 'z' || *c >= 'A' && *c <= 'Z')
+    else if ((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z'))
     {
-      char *start = c;
+      token->type = TOKEN_TYPE_SYMBOL;
+      end = c + 1;
 
-      while (*c >= 'a' && *c <= 'z' || *c >= 'A' && *c <= 'Z' || *c == '-')
-        ++c;
-
-      char *end = c;
-
-      char *token = malloc(sizeof(char) * (end - start + 1));
-      memcpy(token, start, end - start);
-      token[end - start] = '\0';
-
-      bgl_token *bgl_token = bgl_create_token(token);
-
-      bgl_token->type = TOKEN_TYPE_SYMBOL;
-
-      if (list == NULL)
+      while ((*end >= 'a' && *end <= 'z') || (*end >= 'A' && *end <= 'Z') || *end == '-')
       {
-        list = bgl_create_list(bgl_token);
-        current = list;
+        end++;
       }
-      else
-      {
-        bgl_list_append(&current, bgl_token);
-        current = current->next;
-      }
-
-      continue;
     }
 
-    ++c;
+    char *token_text = malloc(sizeof(char) * (end - start + 1));
+    strncpy(token_text, start, end - start);
+    token_text[end - start] = '\0';
+    token->text = token_text;
+
+    if (token->type == TOKEN_TYPE_STRING)
+    {
+      token->text++;
+      token->text[end - start - 2] = '\0';
+    }
+
+    if (list == NULL)
+    {
+      list = bgl_create_list(token);
+      current = list;
+    }
+    else
+    {
+      bgl_list_append(&list, token);
+      current = current->next;
+    }
+
+    c = end;
   }
 
   list = bgl_list_get_head(list);
