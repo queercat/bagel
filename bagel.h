@@ -27,24 +27,3 @@ enum bgl_data_type
     BGL_DATA_TYPE_SYMBOL,
     BGL_DATA_TYPE_LIST,
 } type;
-
-typedef struct bgl_data
-{
-    enum bgl_data_type type;
-
-    union bgl_data_value
-    {
-        char *string;
-        int number;
-        char *symbol;
-    } value;
-
-    struct bgl_data *next;
-} bgl_data;
-
-bgl_data *bgl_read_list(bgl_token_list *);
-bgl_data *bgl_read_atom(bgl_token_list *);
-bgl_data *bgl_read_form(bgl_token_list *);
-bgl_data *bgl_read_string(bgl_token_list *);
-bgl_data *bgl_read_number(bgl_token_list *);
-bgl_data *bgl_read_symbol(bgl_token_list *);

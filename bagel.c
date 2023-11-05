@@ -226,8 +226,6 @@ bgl_token_list *bgl_tokenize(char *text)
   return list;
 }
 
-/** end bgl token handling */
-
 bgl_token_list *bgl_read()
 {
   int size = 1024;
@@ -244,121 +242,19 @@ bgl_token_list *bgl_read()
   return tokens;
 }
 
+void bgl_tokens_advance(bgl_token_list **tokens)
+{
+  *tokens = (*tokens)->next;
+}
+
+/** end bgl token handling */
+
 /** bgl data types */
-
-bgl_data *bgl_create_data(enum bgl_data_type type)
-{
-  bgl_data *data = malloc(sizeof(bgl_data) + sizeof(bgl_data *));
-
-  data->type = type;
-  data->next = NULL;
-
-  return data;
-}
-
-bgl_data *bgl_data_append(bgl_data **data, bgl_data *new_data)
-{
-  bgl_data *current = *data;
-
-  while (current->next != NULL)
-  {
-    current = current->next;
-  }
-
-  current->next = new_data;
-}
-
-bgl_data *bgl_read_list(bgl_token_list *tokens)
-{
-  bgl_data *data = bgl_create_data(BGL_DATA_TYPE_LIST);
-
-  tokens = tokens->next;
-
-  while (tokens->current->type != TOKEN_TYPE_LIST_END)
-  {
-    bgl_data *form = bgl_read_form(tokens);
-    bgl_data_append(&data, form);
-    tokens = tokens->next;
-  }
-
-  return data;
-}
-
-bgl_data *bgl_read_form(bgl_token_list *tokens)
-{
-  switch (tokens->current->type)
-  {
-  case TOKEN_TYPE_LIST:
-    return bgl_read_list(tokens);
-  default:
-    return bgl_read_atom(tokens);
-  }
-}
-
-bgl_data *bgl_read_atom(bgl_token_list *tokens)
-{
-  switch (tokens->current->type)
-  {
-  case TOKEN_TYPE_STRING:
-    return bgl_read_string(tokens);
-  case TOKEN_TYPE_NUMBER:
-    return bgl_read_number(tokens);
-  default:
-    bgl_error("Unknown atom type.");
-    exit(1);
-  }
-}
-
-bgl_data *bgl_read_string(bgl_token_list *tokens)
-{
-  bgl_data *data = bgl_create_data(BGL_DATA_TYPE_STRING);
-
-  data->value.string = tokens->current->text;
-
-  return data;
-}
-
-bgl_data *bgl_read_number(bgl_token_list *tokens)
-{
-  bgl_data *data = bgl_create_data(BGL_DATA_TYPE_NUMBER);
-
-  data->value.number = atoi(tokens->current->text);
-
-  return data;
-}
-
-void bgl_data_print(bgl_data *data)
-{
-  bgl_data *current = NULL;
-  switch (data->type)
-  {
-  case BGL_DATA_TYPE_LIST:
-    printf(" ( ");
-    current = data->next;
-    while (current != NULL)
-    {
-      bgl_data_print(current);
-      current = current->next;
-    }
-    printf(" ) ");
-    break;
-  case BGL_DATA_TYPE_STRING:
-    printf(" %s ", data->value.string);
-    break;
-  case BGL_DATA_TYPE_NUMBER:
-    printf(" %d ", data->value.number);
-    break;
-  }
-}
 
 /** end bgl data types */
 
 bgl_token_list *bgl_eval(bgl_token_list *tokens)
 {
-  bgl_data *ast = bgl_read_form(tokens);
-
-  bgl_data_print(ast);
-
   return tokens;
 }
 
@@ -410,27 +306,14 @@ void bgl_tests()
   if (!_assert(strcmp(list_3->current->text, "bagel") == 0, "Tokenize_WhenCalled_ShouldHaveCorrectCurrent"))
     failed = true;
 
-  // can create AST.
-  bgl_data *ast_0 = bgl_read_form(bgl_tokenize("(1 2 3 (1))"));
+  // testing advancing tokens
 
-  if (!_assert(ast_0 != NULL, "AST_WhenCreated_ShouldNotBeNull"))
+  bgl_token_list *list_4 = bgl_tokenize("bagel cream cheese lox");
+
+  bgl_tokens_advance(&list_4);
+
+  if (!_assert(strcmp(list_4->current->text, "cream") == 0, "TokensAdvance_WhenCalled_ShouldAdvance"))
     failed = true;
-
-  if (!_assert(ast_0->type == TOKEN_TYPE_LIST, "AST_WhenCreated_ShouldHaveCorrectType"))
-    failed = true;
-
-  if (!_assert(ast_0->next->type == TOKEN_TYPE_NUMBER, "AST_WhenCreated_ShouldHaveCorrectType"))
-    failed = true;
-
-  // check for sublist
-  if (!_assert(ast_0->next->next->type == TOKEN_TYPE_LIST, "AST_WhenCreated_ShouldHaveCorrectType"))
-    failed = true;
-
-  if (failed)
-  {
-    printf("TESTS FAILED: bagel sad :(\n");
-    exit(1);
-  }
 }
 
 int main()
