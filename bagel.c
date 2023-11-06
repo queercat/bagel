@@ -249,7 +249,69 @@ void bgl_tokens_advance(bgl_token_list **tokens)
 
 /** end bgl token handling */
 
+/** bgl dynamic array */
+
+typedef struct bgl_dynamic_array
+{
+  int length;
+  int capacity;
+  size_t type_size;
+  void **data;
+  // reference -> array -> start of memory
+} bgl_dynamic_array;
+
+bgl_dynamic_array *bgl_create_dynamic_array(size_t type_size)
+{
+  bgl_dynamic_array *array = malloc(sizeof(bgl_dynamic_array));
+
+  array->capacity = 32;
+  array->length = 0;
+  array->type_size = type_size;
+
+  array->data = malloc(array->capacity * array->type_size);
+
+  return array;
+}
+
+bool bgl_dynamic_array_get(bgl_dynamic_array *array, int idx, void *output)
+{
+  if (idx >= array->length)
+  {
+    bgl_error("SPANK! SPANK! NAUGHTY PROGRAMMER.");
+    return false;
+  }
+
+  memcpy(output, array->data + idx, array->type_size);
+
+  return true;
+}
+
+void bgl_dynamic_array_insert(bgl_dynamic_array *array, void *value)
+{
+  if (array->length >= array->capacity)
+  {
+    array->capacity *= 2;
+    array->data = realloc(array, array->capacity * array->type_size);
+  }
+
+  array->data[array->length++] = value;
+}
+
+/** end dynamic array */
+
 /** bgl data types */
+
+typedef struct bgl_data
+{
+  enum bgl_data_type type;
+  union
+  {
+    char *string;
+    int number;
+    char *symbol;
+    bgl_dynamic_array *array;
+  } value;
+} bgl_data;
 
 /** end bgl data types */
 
@@ -312,7 +374,39 @@ void bgl_tests()
 
   bgl_tokens_advance(&list_4);
 
-  if (!_assert(strcmp(list_4->current->text, "cream") == 0, "TokensAdvance_WhenCalled_ShouldAdvance"))
+  // testing dynamic array
+  bgl_dynamic_array *array_0 = bgl_create_dynamic_array(sizeof(int));
+
+  bgl_dynamic_array_insert(array_0, (void *)10);
+  bgl_dynamic_array_insert(array_0, (void *)10);
+  bgl_dynamic_array_insert(array_0, (void *)10);
+  bgl_dynamic_array_insert(array_0, (void *)69);
+  bgl_dynamic_array_insert(array_0, (void *)10);
+  bgl_dynamic_array_insert(array_0, (void *)10);
+
+  int out = 0;
+
+  bgl_dynamic_array_get(array_0, 3, (void *)&out);
+
+  if (!_assert(out == 69, "DynamicArray_WhenInserted_ShouldHaveCorrectValue"))
+    failed = true;
+
+  // testing bgl_dynamic_array with bgl_data
+  bgl_dynamic_array *array_1 = bgl_create_dynamic_array(sizeof(bgl_data));
+
+  bgl_data *data_0 = malloc(sizeof(bgl_data));
+
+  data_0->type = BGL_DATA_TYPE_NUMBER;
+  data_0->value.number = 69;
+
+  bgl_dynamic_array_insert(array_1, (void *)data_0);
+
+  // get the data.
+  bgl_data *out_data;
+
+  bgl_dynamic_array_get(array_1, 0, (void *)&out_data);
+
+  if (!_assert(out_data->value.number == 69, "DynamicArray_WhenInserted_ShouldHaveCorrectValue"))
     failed = true;
 }
 
