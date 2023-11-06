@@ -251,15 +251,6 @@ void bgl_tokens_advance(bgl_token_list **tokens)
 
 /** bgl dynamic array */
 
-typedef struct bgl_dynamic_array
-{
-  int length;
-  int capacity;
-  size_t type_size;
-  void **data;
-  // reference -> array -> start of memory
-} bgl_dynamic_array;
-
 bgl_dynamic_array *bgl_create_dynamic_array(size_t type_size)
 {
   bgl_dynamic_array *array = malloc(sizeof(bgl_dynamic_array));
@@ -301,22 +292,140 @@ void bgl_dynamic_array_insert(bgl_dynamic_array *array, void *value)
 
 /** bgl data types */
 
-typedef struct bgl_data
+bgl_data *bgl_create_data(enum bgl_data_type type)
 {
-  enum bgl_data_type type;
-  union
+  bgl_data *data = malloc(sizeof(bgl_data));
+
+  data->type = type;
+
+  return data;
+}
+
+bgl_data *bgl_free_data(bgl_data *data)
+{
+  free(data);
+}
+
+bgl_data *bgl_read_form(bgl_token_list **tokens)
+{
+  bgl_token *token = (*tokens)->current;
+
+  bgl_data *ast;
+
+  switch (token->type)
   {
-    char *string;
-    int number;
-    char *symbol;
-    bgl_dynamic_array *array;
-  } value;
-} bgl_data;
+  case TOKEN_TYPE_LIST:
+    ast = bgl_read_list(tokens);
+    break;
+  default:
+    ast = bgl_read_atomic(tokens);
+  }
+
+  return ast;
+}
+
+bgl_data *bgl_read_atomic(bgl_token_list **tokens)
+{
+  bgl_token *token = (*tokens)->current;
+  bgl_data *ast;
+
+  switch (token->type)
+  {
+  case TOKEN_TYPE_NUMBER:
+    ast = bgl_read_number(*tokens);
+    break;
+  case TOKEN_TYPE_STRING:
+    ast = bgl_read_string(*tokens);
+    break;
+  case TOKEN_TYPE_SYMBOL:
+    ast = bgl_read_symbol(*tokens);
+    break;
+  }
+
+  bgl_tokens_advance(tokens);
+
+  return ast;
+}
+
+bgl_data *bgl_read_list(bgl_token_list **tokens)
+{
+  bgl_tokens_advance(tokens);
+
+  bgl_data *data = bgl_create_data(BGL_DATA_TYPE_LIST);
+
+  bgl_dynamic_array *list = bgl_create_dynamic_array(sizeof(bgl_data));
+
+  while ((*tokens)->current->type != TOKEN_TYPE_LIST_END)
+  {
+    bgl_data *form = bgl_read_form(tokens);
+    bgl_dynamic_array_insert(list, (void *)form);
+  }
+
+  bgl_tokens_advance(tokens);
+
+  data->value.array = list;
+
+  return data;
+}
+
+bgl_data *bgl_read_symbol(bgl_token_list *tokens)
+{
+  bgl_data *data = bgl_create_data(BGL_DATA_TYPE_SYMBOL);
+  data->value.symbol = tokens->current->text;
+
+  return data;
+}
+
+bgl_data *bgl_read_string(bgl_token_list *tokens)
+{
+  bgl_data *data = bgl_create_data(BGL_DATA_TYPE_STRING);
+  data->value.string = tokens->current->text;
+
+  return data;
+}
+
+bgl_data *bgl_read_number(bgl_token_list *tokens)
+{
+  bgl_data *data = bgl_create_data(BGL_DATA_TYPE_NUMBER);
+  data->value.number = atoi(tokens->current->text);
+
+  return data;
+}
+
+void bgl_data_print(bgl_data *data)
+{
+  switch (data->type)
+  {
+  case BGL_DATA_TYPE_NUMBER:
+    printf("%d", data->value.number);
+    break;
+  case BGL_DATA_TYPE_STRING:
+    printf("%s", data->value.string);
+    break;
+  case BGL_DATA_TYPE_SYMBOL:
+    printf("%s", data->value.symbol);
+    break;
+  case BGL_DATA_TYPE_LIST:
+    printf("(");
+    for (int i = 0; i < data->value.array->length; i++)
+    {
+      bgl_data_print(data->value.array->data[i]);
+      if (i != data->value.array->length - 1)
+        printf(" ");
+    }
+    printf(")");
+    break;
+  }
+}
 
 /** end bgl data types */
 
 bgl_token_list *bgl_eval(bgl_token_list *tokens)
 {
+  bgl_data *ast = bgl_read_form(&tokens);
+
+  bgl_data_print(ast);
+
   return tokens;
 }
 
